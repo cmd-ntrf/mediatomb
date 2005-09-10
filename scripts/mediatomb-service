@@ -1,0 +1,98 @@
+#!/bin/sh
+#
+# mediatomb This script starts and stops the mediatomb daemon
+#
+# chkconfig: - 95 30
+# processname: mediatomb
+# description: mediatomb is a daemon process which provides a UPnP service
+# config: /etc/mediatomb
+# config: /etc/mediatomb/config.xml
+# pidfile: /var/run/mediatomb.pid
+
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+# Source networking configuration.
+. /etc/sysconfig/network
+
+# Check that networking is up.
+[ ${NETWORKING} = "no" ] && exit 0
+
+# Set default mediatomb configuration.
+
+# either make an installation in /etc/mediatomb and leave this blank,
+# or specify an alternative config file location using the -c option
+# Note: be aware, that -i parameter is used to set the ip of the 
+# interface specified above
+MEDIATOMBOPTIONS=""
+
+INTERFACE="NOT_SET"
+
+###############################
+USER="nobody"
+GROUP="nobody"
+PIDFILE="/var/run/mediatomb.pid"
+LOGFILE="/var/log/mediatomb"
+# make sure to run it as nobody
+MEDIATOMB="-d -u $USER -g $GROUP -P $PIDFILE -l $LOGFILE"
+
+
+
+
+[ -f /usr/bin/mediatomb ] || exit 0
+[ ${INTERFACE} = "NOT_SET" ] && echo "Please edit the script and change \
+the INTERFACE variable to your network device (eth0, eth1, etc.)" && exit 0
+
+PATH=$PATH:/usr/bin:/usr/local/bin
+
+IFACE_IP=`ifconfig | grep -i "$INTERFACE" -A 1|grep "inet addr"|cut -d " " -f 12|cut -d ":" -f 2`
+
+# By default it's all good
+RETVAL=0
+
+# See how we were called.
+case "$1" in
+  start)
+	# Start daemon.
+    echo -n "Applying multicast settings to $INTERFACE... "
+    # those settings are necessary for us to react to M-SEARCH requests
+    route add -net 239.0.0.0 netmask 255.0.0.0 $INTERFACE >/dev/null 2>&1
+    ifconfig $INTERFACE allmulti
+    touch $PIDFILE
+    chown nobody $PIDFILE
+    
+	echo -n "Starting mediatomb: "
+
+    LD_ASSUME_KERNEL=2.2.5 daemon $NICELEVEL mediatomb $MEDIATOMB -i $IFACE_IP $MEDIATOMBOPTIONS
+
+	RETVAL=$?
+        echo
+        [ $RETVAL = 0 ] && touch /var/lock/subsys/mediatomb
+        ;;
+  stop)
+        # Stop daemons.
+        echo -n "Shutting down mediatomb: "
+        killproc mediatomb
+        RETVAL=$?
+        echo
+        [ $RETVAL = 0 ] && rm -f /var/lock/subsys/mediatomb
+        ;;
+  restart)
+        $0 stop
+        $0 start
+        ;;
+  condrestart)
+       [ -e /var/lock/subsys/mediatomb ] && $0 restart
+       ;;
+  status)
+	status mediatomb
+	RETVAL=$?
+	;;
+  *)
+	echo "Usage: $0 {start|stop|restart|status|condrestart}"
+	RETVAL=1
+	;;
+esac
+
+exit $RETVAL

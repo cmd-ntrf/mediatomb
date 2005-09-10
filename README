@@ -1,0 +1,477 @@
+MediaTomb - UPnP AV mediaserver for Linux, distributed under GNU GPL.
+
+Copyright (C) 2005 Gena Batyan <bgeradz@deadlock.dhs.org>, 
+                   Sergey Bostandzhyan <jin@deadlock.dhs.org>
+
+http://mediatomb.sf.net/                   
+
+THIS SOFTWARE COMES WITH ABSOLUTELY NO WARRANTY! USE AT YOUR OWN RISK!
+
+NOTE: by default the server UI is disabled! Check the "SETUP" section to find
+out why and how to enable it.
+
+If you encounter any problems with this software, you are encouraged to
+post to the project forums at http://sourceforge.net/forum/?group_id=129766
+or to e-mail us directly.
+
+FEATURES
+--------
+
+The 0.8.x releases will focus on virtual containers. There are a lot of
+things that have to be taken care of, lots of known issues that have to
+be fixed. Here is a list of implemented features:
+- scriptable virtual containers (check doc/scripting-intro.txt for details)
+- daemon mode
+- configurable filename to mimetype mappings
+- configurable mimetype to upnp:class mappings
+- add/remove/edit/browse media via the web UI
+- browse media via UPnP
+- stream/download media
+- cds container updates
+- adding external URLs
+- ActiveItems (see Help in the UI for details)
+
+Next planned features:
+- improvements for virtual containers 
+- transcoding
+- UPnP improvements (filter parameter for browse)
+
+
+MPORTANT NOTE!!!
+Versions 0.7.*, 0.8.0 and 0.8.1 are not database compatible,
+
+You will have to recreate your collection. Our apologies for inconvinience.
+
+I would suggest a complete reinstall. Removing ~/.mediatomb and running
+newly installed version of tomb-install is HIGHLY recommended. 
+
+
+REQUIREMENTS
+------------
+
+- XSL-enabled web browser to access the web interface.
+    Tested and works with the recent versions of
+      - Mozilla
+      - Internet Explorer
+    Tested and does not work with the recent versions of
+      - Konqueror
+- Several libraries, see installation instructions.
+
+    
+INSTALLATION
+------------
+
+In order to compile MediaTomb you will have to install the following packages:
+
+- UPnP SDK from http://upnp.sourceforge.net/
+  Note:  if you are not using the spec file that is provided on the SF 
+         page of the UPnP SDK project, beware, that "make install" forgets 
+         to put ixml.h to the right place, so you will have to copy it to 
+         /usr/include/upnp manually.
+
+  Note2: for optimal performance you should use custom settings in the 
+         libupnp-1.2.1a/upnp/inc/config.h file.
+         I suggest JOBS_PER_THREAD 1, MIN_THREADS 4
+
+         The SDK RPMs that we are offering along with MediaTomb are patched
+         with the above settings.
+
+  Note3: DSM-320 users - please read the forums on our SourceForge project
+         page. Some problems regarding the UPnP SDK, MediaTomb and the
+         DSM-320 are discussed there, some solutions are offered.
+        
+  If you are not using the RPM package, proceed as following:
+
+  Installation of this package is not straight forward.
+    tar zxvf libupnp-1.2.1.tar.gz
+    cd libupnp-1.2.1
+    cd upnp
+    make
+    make install
+    cd ../ixml
+    make
+    make install
+    cd ../threadutil
+    make
+    make install
+    cd ..
+    cp upnp/inc/ixml.h /usr/include/
+
+  The last line is vital due to the bug in the SDK's makefiles
+  For whatever reason ixml.h is not being installed and nothing
+  using libupnp sdk will compile without that.
+
+- At least one of the databases:
+  - sqlite3 from http://www.sqlite.org/ (Very SLOW media import)
+    On Fedora Core it's sqlite3-devel and 'sqlite3' packages.
+    On Debian it's 'libsqlite3' 'libsqlite3-dev' and 'sqlite3'
+       (the last package includes command line client which is also required)
+  - mysql client library (RECOMMENDED)
+    NOTE: Write operations to sqlite3 database is VERY SLOW, use sqlite3
+    only if you don't have another choise.
+  
+- libmagic (OPTIONAL, RECOMMENDED)
+  On Fedora Core the package is called 'file'. (Note, that due to a bug
+  (tested on FC4) filemagic can return wrong mimetypes, see
+  https://bugzilla.redhat.com/bugzilla/show_bug.cgi?id=165323 for more
+  information. If you have the problem, try installing file-4.15-1
+  from FC development)
+  On Debian it's libmagic1 and libmagic-dev
+
+- SpiderMonkey JavaScript Engine http://www.mozilla.org/js/spidermonkey/
+  (OPTIONAL, HIGHLY RECOMMENDED)
+  This package is necessary for virtual objects to work.
+  You will find some RPMs here: http://ftp.mozilla.org/pub/mozilla.org/js/
+  Fedora does not have a packages for this library, you will have to
+  fetch / build it yourself, the library is normally called libjs.
+  On debian install the packages libsmjs1 and libsmjs-dev.
+
+- id3lib http://id3lib.sourceforge.net/ (at least version 3.8.3)
+  (OPTIONAL, RECOMMENDED) You will need this library to have
+  virtual objects for mp3 files
+
+- Python - there is also a setup script that makes necessary installations
+  in your home directory, you will need Python to run it.
+
+If the server does not respond to search requests from media renderers or
+control points on the network, try applying these settings to your
+network interface (assuming eth1):
+
+route add -net 239.0.0.0 netmask 255.0.0.0 eth1 >/dev/null 2>&1
+ifconfig eth1 allmulti
+
+Those settings will be applied automatically in the init.d startup script.
+
+If you fail to setup the server on your system please tell us which distro you
+are using and write a detailed description of what exactly happened during 
+./configure or compilation.
+
+If you find some errors or unclarities in the above description, a message
+would be appreciated.
+
+
+SETUP
+-----
+
+So you have finally installed MediaTomb and want to check it out. There is
+however one thing that you have to do - before using the server for the
+first time you must run the tomb-install script to perform the setup in
+your home directory.
+
+tomb-install will create a ~/.mediatomb directory in your home. There you will
+find the server configuration file (config.xml), the database, the link to
+the web directory and the html redirector.
+
+By default the redirector is called mediatomb.html, it is created after
+the first launch of the server. Open a web browser and manually
+add this file as a bookmark. When the server is running, the redirector will
+forward you to the web UI. It is quite handy, because the server port may 
+change upon restarts.
+
+IMPORTANT NOTE:
+Once installed mediatomb uses sqlite3 as the default database backend for the
+sole reason that sqlite may be set up automatically without any manual
+configuration by the user and thus the server will be immediately available
+after installation.
+However, sqlite3 is VERY SLOW at media import, whereas mysql has
+superior performance with any operations. Hence mysql is actually the
+preferred database backend and sqlite3 should only be used as the last resort
+if MySQL is not available.
+
+To use MySQL you will have to create a MySQL database manually
+by invoking the SQL script located under the installation directory at
+<prefix>/share/mediatomb/mysql.sql
+and manually adapt mediatomb's configuration file.
+(see CONFIGURATION section below for details)
+If you know nothing about MySQL, try doc/mysql.txt before reaching
+for MySQL manual.
+
+
+WHY IS THE WEB UI DISABLED BY DEFAULT?
+--------------------------------------
+IMPORTANT!!! Please read this carefully.
+
+The server has a web UI that allows you to browse the contents of your
+harddrive and to easily add media. The problem is, that since it is a 
+web UI running on the server, it can be accessed by anyone on your network,
+meaning that anyone could browse and download your data. This is probably
+a lesser issue in a small home environment (which is actually the intended
+audience) but could easily become an issue on a bigger network.
+
+The irony is, that you can not yet add any media to the server, without 
+the UI :) So if you feel unsecure, you should probably temporarily enable
+the user interface, start the server on 127.0.0.1, add the media that you 
+want to share, disable the UI and restart the server on your normal LAN 
+network interface.
+
+In order to enable the UI simply change <ui enabled="no"/> to 
+<ui enabled="yes"/> in the configuration file. 
+And don't blame us for anything! ;>
+
+
+CONFIGURATION
+-------------
+
+If you have already performed the setup using tomb-install you will have
+a default configuration file in your ~/.mediatomb directory, it is called
+config.xml
+
+Note: paths starting with / are treated as absulute. Paths which do not
+start with / are treated as relative to server home (See <home>).
+
+Here is a sample configuration file with description of the various tags.
+- "Required" means that the server will not start if the tag is missing in the
+  configuration.
+
+- "Optional" means that the tag can be left out of the configuration file.
+
+- "Default if missing" means, that the tag can be left out, but will be 
+  filled by some default value upon server startup. 
+
+<server> (Required)
+    This section defines the server configuration parameters.
+
+    <ui enabled="no"/> (Required)
+        Enables or disables the web user interface, change to "yes" in order 
+        to enable it.
+
+    <port>50555<port/> (Optional)
+        Specifies the port where the server will be listening for HTTP 
+        requests. Note, that because of the implementation in the UPnP SDK 
+        only ports above 49152 are supported.
+
+    <ip>192.168.0.23</ip> (Optional)
+        Specifies the IP address to bind to. (Optional)
+    
+    <name>MediaTomb</name> (Default if missing: MediaTomb)
+        Server friendly name, you will see this on your devices that you use 
+        to access the server.
+    
+    <udn/> (Required)
+        Unique Device Name, according to the UPnP spec it must be consistent
+        throughout reboots. You can fill in something yourself, but we suggest
+        that you leave this tag empty - it will be filled out and saved
+        automatically after the first launch of the server.
+
+    <home>/home/your_user_name/.mediatomb</home> (Required)
+        Server home - the server will search for the data that it needs 
+        relative to this directory (for the media database, for directory 
+        holding device and service description xml files, icons, etc.)
+        
+    <webroot>web</webroot> (Required)
+        Root directory for the web server (relative to serer home), this is 
+        the location where device description documents, UI xsl files, etc. 
+        are stored.
+
+    <servedir>/home/myuser/mystuff</servedir> (Optional)
+        Files from this directory will be served as from a regular webserver.
+        They do not need to be added to the database, but they are also not
+        served via UPnP browse requests.
+        
+        The url is: http://ip:port/content/serve/
+        Directory listing is not supported, you have to specify full paths.
+        
+        Example: the file something.jar is located in 
+        /home/myuser/mystuff/javasubdir/something.jar on your filesystem. 
+        Assuming the above configuration you could download it by entering 
+        this link in your web browser: 
+        http://192.168.0.23:50555/content/serve/javasubdir/something.jar
+        
+        
+    <alive>180</alive> (Default if missing: 180)
+        Interval for broadcasting SSDP:alive messages
+        
+    <bookmark>mediatomb.html</bookmark> (Default if missing: mediatomb.html)
+        Bookmark file for fast access to the web UI
+        
+    <storage driver="..."> (Required)
+        Specifies the storage driver. Currently sqlite3 and mysql are 
+        supported.
+    
+        Every storage driver has it's own configuration parameters.
+    
+        - for sqlite3 use
+        <storage driver="sqlite3">
+           <database-file>sqlite3.db</database-file> (Required) 
+        </storage>
+
+        - for mysql you'll need something like this:
+        <storage driver="mysql">
+          <host>localhost</host>
+          <username>root</username>
+          <password></password>
+          <database>mediatomb</database>
+        </storage>
+  
+<import> (Required)
+    Section specifying various import parameters, currently only one is 
+    supported. 
+    
+    <filesystem-charset>ISO-8859-1</filesystem-charset>
+        (Default if missing: ISO-8859-1)
+        Defines the charset of the filesystem. For example, if you have 
+        filenames in cyrillic KOI8-R encoding, then you should specify that 
+        here. The server uses UTF-8 for UPnP and for the web UI, this import
+        parameter will help you to correctly import your data.
+        
+    <metadata-charset>ISO-8859-1</metadata-charset>
+        Same as above, but defines the charset of the metadata.
+
+    <script> (Required if javascript support is enabled)
+        Points to the script invoked upon media import.
+        For more details read doc/scripting-intro.txt
+        This setting defaults to ${prefix}/share/mediatomb/js/import.js
+
+    <magic-file> (Optional)
+        Specifies an alternative file for filemagic, contaning mimetype 
+        information.
+
+    <mappings> (Optional, also all subsections are optional)
+        Defines various mapping options for importing media, currently
+        two subsections are supported.
+
+        <extension-mimetype ignore-unknown="no">
+            This section holds the filename extension to mimetype mappings.
+            
+            If "ignore-unknown" is set to "yes", then only the extensions 
+            that are listed in this section are imported. (Default if 
+            missing: no)
+
+            <map from="mp3" to="audio/mpeg"/>
+                Specifies a mapping from a certain filename extension
+                (everything after the last dot ".") to mimetype.
+
+                Note, that this improves the import speed, because
+                invoking libmagic to discover the right mimetype
+                of a file is omited for files with extensions listed here. 
+
+                Note, extension is case sensitive, this will probably need
+                to be fixed.
+
+        <mimetype-upnpclass>
+            This section holds the mimetype to upnp:class mappings. 
+            
+            <map from="audio/*" to="object.item.audioItem"/>
+                Specifies a mapping from a certain mimetype to upnp:class
+                in the Content Directory. The mime type can either be entered 
+                explicitly "audio/mpeg" or using a wildcard after the slash 
+                "audio/*". The values of "from" and "to" attributes are
+                case sensitive.
+
+        <library-options>
+            This section holds optoins for the various supported import 
+            libraries.
+
+            <libexif>
+                Options for the exif library.
+
+                <auxdata>
+                    Currently only adding keywords to auxdata is supported.
+                    For a list of keywords/tags see the libexif documentation.
+                    Auxdata can be read by the import java script to gain more
+                    control over the media structure. For example, you could
+                    additionaly sort your photos by camera model or flash
+                    settings, if this information is provided with the exif
+                    data.
+
+                    <add tag="keyword"/>
+                        If the library was able to extract the data according
+                        to the given keyword, it will be added to auxdata.
+                        You can then use that data in your import scripts.
+                
+            <libextractor>
+                Options for the extractor library.
+
+                <auxdata>
+                    Currently only adding keywords to auxdata is supported.
+                    For a list of keywords/tags see the libextractor documentation.
+
+                    <add tag="keyword"/>
+                        If the library was able to extract the data according
+                        to the given keyword, it will be added to auxdata.
+                        You can then use that data in your import scripts.
+
+RUNNING
+-------
+
+After everything has been set up you can simply run "mediatomb" from the
+console. To shutdown the server cleanly, press Enter.
+
+There is also a small number of command line arguments:
+
+Usage: mediatomb [options]
+                        
+Supported options:
+    --ip or -i         ip address
+    --port or -p       server port (the SDK only permits values => 49152)
+    --config or -c     configuration file to use
+    --daemon or -d     run server in background
+    --pidfile or -P    file to hold the process id
+    --user or -u       run server under specified username
+    --group or -g      run server unser specified group
+    --add or -a        add the given file/directory
+    --logfile or -l    log to specified file
+    --help or -h       this help message
+
+If you want to run a second server from the same PC, make sure to use a 
+different configuration file with a different udn and a different database.
+
+After server launch the bookmark file is created in ~/.mediatomb
+You now can manually add the bookmark ~/.mediatomb/mediatomb.html in your 
+browser. This will redirect you to the UI if the server is running.
+
+Assuming that you enabeld the UI, you should now be able to get around
+quite easily.
+
+We now also support the daemon mode which allows to start the server in
+background, the --user and --group parameters should be used to run 
+the server under an unprivileged account. A script for 
+starting/stopping the server is also provided.
+
+
+INIT.D STARTUP SCRIPT
+---------------------
+
+We received an init.d startup script for MediaTomb from Iain Lea, I tested it
+on my Fedora Core 3 installation and had to make some adaptions. Took me
+quite a while to figure out that the server would not run without
+the LD_ASSUME_KERNEL=2.2.5 environment variable.
+
+The script now also applies multicast options that are required for
+UPnP (otherwise the server will not react to M-SEARCH requests).
+
+In order to use the script you will have to edit it and set the INTERFACE 
+variable to the desired network interface (eth0, eth1, etc.)
+
+
+ACKNOWLEDGEMENTS
+----------------
+
+We are using the following code in our tree:
+
+- uuid from E2fsprogs 1.35 under GNU GPL, 
+  Copyright (C) 1996, 1997, 1998 Theodore Ts'o. <tytso@mit.edu>
+  
+  Stuff from the UPnP SDK was conflicting with libuuid, so we had to change a
+  name of one function.
+
+- md5 implementation by L. Peter Deutsch <ghost@aladdin.com>,
+  Copyright (C) 1999 Aladdin Enterprises.  All rights reserved. (See source
+  headers for further details)
+
+- md5 javascript implementation distributed under BSD License,
+  Copyright (C) Paul Johnston 1999 - 2002. http://pajhome.org.uk/crypt/md5 
+
+- all icons for the UI are from the redhat-artwork-0.117 package under GNU GPL, 
+  (I could not find any (C) in the supplied documents)
+
+
+CONTRIBUTIONS
+-------------
+
+Initial version of the mediatomb startup script was contributed 
+by Iain Lea <iain@bricbrac.de>
+
+--------------------------------------------------------------------------------
+September 7, 2005
+

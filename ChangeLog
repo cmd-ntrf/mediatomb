@@ -1,0 +1,69 @@
+MediaTomb - UPnP AV Mediaserver for Linux.
+
+v0.8.1
+        * added "serve" directory, any files there can be downloaded 
+          like from a normal webserver
+        * implemented keyword extraction for auxdata from libexif
+        * implemented keyword extraction for auxdata from libextractor
+        * added Exif metadata support for images via libexif.
+        * added resolution attribute to image res tag
+        * added bitrate and duration attribute to mp3 res tag (via id3lib)
+        * added auxdata field for items, auxilary data can be extracted
+          and used by import scripts.
+        * added configuration options to specify which aux fields should 
+          be extracted and filled by the library.
+	    * added mysql support
+        * refined configure script, almost all dependencies are now
+	      optional.
+	    * changed database, (not backward compatible again)
+        * when an item is deleted all referenced items are deleted as well
+        * added option to specify an alternative magic file
+
+v0.8.0  15.06.2005  Scripting/Virtual Server Layout
+        * Server layout can now be defined using java script,
+          default layout script is provided.
+
+        * Added ID3 tag support.
+
+        * Fixed various memory leaks.
+
+        * Files in the Filesystem Browser are now sorted alphabetically.
+
+        * Added extension to mime-type mappings to the configuration.
+
+        * Added option to limit import by file extensions.
+
+        * Added daemon mode as well as setuid/setgid options, init.d
+          script included.
+
+        * Fixed mime-type recognition when importing media (filemagic output
+          is now parsed using regular expressions)
+
+        * Introduced new log system.
+
+        * Adding/Browsing/Removing media in the UI is now handled 
+          asynchroniously.
+
+        * Added a command line option to import media upon server launch.
+
+        * Added target directory option to tomb-install, cleaned up a few
+          things.
+
+v0.7.1  17.04.2005  D-Link DSM-320 fix
+        * Mappings of mime-types to upnp classes are now configurable.
+          Actually this is how we solved the DSM-320 problem - they
+          crashed if upnp class of items was different than what the
+          DSM expected.
+
+        * tomb-install now creates the database and configuration file
+          from templates (was hardcoded); also sets the name of the server
+          individually for each user (host / username)
+
+        * Improved handling of configuration, if non critical options are
+          missing we are now setting default values.
+
+v0.7    14.04.2005  First release
+        * The changelog does not start at day 0, updates will be made
+          starting from this release.
+        
+          

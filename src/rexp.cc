@@ -1,0 +1,150 @@
+/*  rexp.cc - this file is part of MediaTomb.
+                                                                                
+    Copyright (C) 2005 Gena Batyan <bgeradz@deadlock.dhs.org>,
+                       Sergey Bostandzhyan <jin@deadlock.dhs.org>
+                                                                                
+    MediaTomb is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+                                                                                
+    MediaTomb is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+                                                                                
+    You should have received a copy of the GNU General Public License
+    along with MediaTomb; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*/
+
+#include "rexp.h"
+
+using namespace zmm;
+
+static String error_string(int code, regex_t *regex)
+{
+    int size = regerror(code, regex, NULL, 0);
+    String buf = String::allocate(size);
+    regerror(code, regex, buf.c_str(), size);
+    buf.setLength(size - 1);
+    return buf;
+}
+
+RExp::RExp() : Object()
+{
+    isCompiled = false;
+}
+RExp::~RExp()
+{
+    if (isCompiled)
+    {
+        regfree(&regex);
+    }
+}
+String RExp::getPattern()
+{
+    return pattern;
+}
+void RExp::compile(String pattern, int flags)
+{
+    int ret;
+    flags |= REG_EXTENDED; // alsays use extended regexps
+    this->pattern = pattern;
+    ret = regcomp(&regex, pattern.c_str(), flags);
+    if (ret != 0)
+        throw Exception(error_string(ret, &regex));
+    isCompiled = true;
+}
+
+void RExp::compile(zmm::String pattern, const char *sflags)
+{
+    int flags = 0;
+    char *p = (char *)sflags;
+    char c;
+    while ((c = *p) != 0)
+    {
+        switch (c)
+        {
+            case 'i': flags |= REG_ICASE; break;
+            case 's': flags |= REG_NEWLINE; break;
+            default: throw Exception(_("RExp: unknown flag: ")+ c);
+        }
+        p++;
+    }
+    compile(pattern, flags);
+}
+
+Ref<Matcher> RExp::matcher(String text, int nmatch)
+{
+    return Ref<Matcher>(new Matcher(Ref<RExp>(this), text, nmatch));
+}
+Ref<Matcher> RExp::match(String text, int nmatch)
+{
+    Ref<Matcher> m = matcher(text, nmatch);
+    if (m->next())
+        return m;
+    else
+        return nil;
+}
+
+bool RExp::matches(String text)
+{
+    Ref<Matcher> matcher(new Matcher(Ref<RExp>(this), text, 0));
+    return matcher->next();
+}
+
+Matcher::Matcher(zmm::Ref<RExp> rexp, String text, int nmatch)
+{
+    this->rexp = rexp;
+    this->text = text;
+    this->ptr = NULL;
+    this->nmatch = nmatch++; 
+    if (this->nmatch)
+        this->pmatch = (regmatch_t *)MALLOC(this->nmatch * sizeof(regmatch_t));
+    else
+        this->pmatch = NULL;
+}
+Matcher::~Matcher()
+{
+    if (pmatch)
+        FREE(pmatch);
+}
+String Matcher::group(int i)
+{
+    regmatch_t *m = pmatch + i;
+    if (m->rm_so >= 0)
+        return String(ptr + m->rm_so, m->rm_eo - m->rm_so);
+    else
+        return nil;
+}
+bool Matcher::next()
+{
+    int ret;
+
+    if (ptr == NULL) // first match
+    {
+        ptr = text.c_str();
+    }
+    else
+    {
+        if (! *ptr)
+            return false;
+        ptr += pmatch->rm_eo;
+        if (! *ptr)
+            return false;
+    }
+    
+    int flags = ((nmatch == 0) ? REG_NOSUB : 0);
+    ret = regexec(&rexp->regex, ptr, nmatch, pmatch, flags);
+    switch (ret)
+    {
+        case REG_NOMATCH:
+            return false;
+        case 0:
+            return true;
+        default:
+            throw Exception(error_string(ret, &rexp->regex));
+    }
+}
+
