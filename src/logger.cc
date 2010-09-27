@@ -165,9 +165,12 @@ void _print_backtrace(FILE* file)
         void* b[100];
         int size = backtrace(b, 100);
         char **s = backtrace_symbols(b, size);
-        for(int i = 0; i < size; i++)
-            fprintf(file, "_STRACE_ %i %s\n", i, s[i]);
-        free(s);
+        if (s != NULL)
+        {
+            for(int i = 0; i < size; i++)
+                fprintf(file, "_STRACE_ %i %s\n", i, s[i]);
+            free(s);
+        }
     }
     
 #endif
