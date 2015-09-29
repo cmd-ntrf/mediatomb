@@ -2200,7 +2200,7 @@ Child tags:
     to tune some other features as well.
 
     Currently the library-options allow additional extraction of the so called
-    auxilary data (explained below) and provide control over the video
+    auxiliary data (explained below) and provide control over the video
     thumbnail generation.
 
     Here is some information on the auxdata: UPnP defines certain tags to pass
